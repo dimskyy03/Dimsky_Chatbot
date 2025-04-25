@@ -1,9 +1,6 @@
 from google import generativeai as genai
 import streamlit as st
 
-# Load environment variables
-#load_dotenv()
-#API_KEY = os.getenv('API_KEY')
 
 API_KEY = st.text_input("OpenAI API Key", type="password")
 
