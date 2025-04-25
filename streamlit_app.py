@@ -10,7 +10,7 @@ API_KEY = st.text_input("OpenAI API Key", type="password")
 
 # Check API key
 if not API_KEY:
-    raise ValueError("API key not found. Please set again your API key.")
+    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
     # Setup Gemini Client
     client = genai.configure(api_key= API_KEY)
