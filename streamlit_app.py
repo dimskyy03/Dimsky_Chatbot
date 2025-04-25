@@ -2,11 +2,11 @@ from google import generativeai as genai
 import streamlit as st
 
 
-API_KEY = st.text_input("OpenAI API Key", type="password")
+API_KEY = st.text_input("Gemini API Key", type="password")
 
 # Check API key
 if not API_KEY:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
+    st.info("Please add your Gemini API key to continue.", icon="🗝️")
 else:
     # Setup Gemini Client
     client = genai.configure(api_key= API_KEY)
