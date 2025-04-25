@@ -1,57 +1,80 @@
-from google import generativeai as genai
 import streamlit as st
+import google.generativeai as genai
 
+# Initialize session state for API key and flag
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = None
+if 'api_key_set' not in st.session_state:
+    st.session_state.api_key_set = False
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
 
-API_KEY = st.text_input("Gemini API Key", type="password")
+# Streamlit app
+st.title("💬 Google Gemini AI Chatbot")
 
-# Check API key
-if not API_KEY:
-    st.info("Please add your Gemini API key to continue.", icon="🗝️")
+# API key input section
+if not st.session_state.api_key_set:
+    st.subheader("Enter Gemini API Key")
+    api_key_input = st.text_input("API Key", type="password", key="api_key_input")
+    if st.button("Submit API Key"):
+        if api_key_input:
+            try:
+                # Test the API key by configuring and listing models
+                genai.configure(api_key=api_key_input)
+                genai.list_models()  # This will raise an error if the key is invalid
+                st.session_state.api_key = api_key_input
+                st.session_state.api_key_set = True
+                st.success("API key set successfully!")
+                st.button("Click here to start")
+            except Exception as e:
+                st.error(f"Invalid API key: {str(e)}")
+        else:
+            st.error("Please enter a valid API key.")
 else:
-    # Setup Gemini Client
-    client = genai.configure(api_key= API_KEY)
+    # Configure the API (already validated)
+    genai.configure(api_key=st.session_state.api_key)
+    st.write("API key is set. Ready to chat!")
 
-    # choose the model from sidebar
-    choosen_model = st.sidebar.selectbox("Choose gemini model", [model.name for model in genai.list_models()])
+    # Sidebar for model selection
+    st.sidebar.subheader("Model Selection")
+    # Get model names and strip 'models/' prefix
+    model_names = [model.name.replace('models/', '') for model in genai.list_models() if 'gemini' in model.name.lower()]
+    choosen_model = st.sidebar.selectbox("Choose Gemini model", model_names)
 
     # Function to call Google AI API
     def call_google_ai(prompt, model_name=choosen_model):
-        # Initialize the model
-        model = genai.GenerativeModel(model_name)  # Use a valid model name
-        # Generate content
-        response = model.generate_content(prompt)
-        # Strip leading newline if present
-        if response.text.startswith('\n'):
-            response.text = response.text[1:]
-        return response.text
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            text = response.text
+            if text.startswith('\n'):
+                text = text[1:]
+            return text.strip()
+        except Exception as e:
+            return f"Error generating response: {str(e)}"
 
-    # streamlit app
-    st.title("💬Google Gemini AI Chatbot")
-
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Display the existing chat messages via `st.chat_message`.
+    # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
+    # Chat input
     if prompt := st.chat_input("What is up?"):
-
-        # Store and display the current prompt.
+        # Store and display user prompt
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-    #generate a response from the AI model using the prompt.
-        response = call_google_ai(prompt)
+        # Generate and display AI response
+        with st.spinner("Generating response..."):
+            response = call_google_ai(prompt, choosen_model)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            with st.chat_message("assistant"):
+                st.markdown(response)
 
-        # Store and display the AI's response.
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        with st.chat_message("assistant"):
-            st.markdown(response)
+    # Optional: Reset API key
+    if st.sidebar.button("Reset API Key"):
+        st.session_state.api_key = None
+        st.session_state.api_key_set = False
+        st.session_state.messages = []
+        st.experimental_rerun()  # Refresh to show input field
